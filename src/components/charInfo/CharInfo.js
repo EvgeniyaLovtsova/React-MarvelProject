@@ -1,83 +1,50 @@
-import { Component } from "react";
+import { useEffect, useState } from "react";
 
-import MarvelService from "../../services/MarvelService";
 import Spinner from "../spinner/Spinner";
 import ErrorMessage from "../errorMessage/ErrorMessage";
 import Skeleton from "../skeleton/Skeleton";
 
+import useMarvelService from "../../services/MarvelService";
 import "./charInfo.scss";
+import { Link } from "react-router-dom";
 
-class CharInfo extends Component {
-  state = {
-    char: null,
-    loading: false,
-    error: false,
-  };
+const CharInfo = (props) => {
+  const [char, setChar] = useState(null);
 
-  marvelService = new MarvelService();
+  const { loading, error, getCharecter, clearError } = useMarvelService();
 
-  componentDidMount() {
-    this.updateChar();
-  }
+  useEffect(() => {
+    updateChar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.charId]);
 
-  componentDidUpdate(prevProps) {
-    if (this.props.charId !== prevProps.charId) {
-      this.updateChar();
-    }
-  }
-
-  updateChar = () => {
-    const { charId } = this.props;
-    if (!charId) {
+  const updateChar = () => {
+    if (!props.charId) {
       return;
     }
 
-    this.onCharLoading();
-
-    this.marvelService
-      .getCharecter(charId)
-      .then(this.onCharLoaded)
-      .catch(this.onError);
+    clearError();
+    getCharecter(props.charId).then(onCharLoaded);
   };
 
-  onCharLoaded = (char) => {
-    this.setState({
-      char,
-      loading: false,
-    });
+  const onCharLoaded = (char) => {
+    setChar(char);
   };
 
-  onCharLoading = () => {
-    this.setState({
-      loading: true,
-    });
-  };
+  const skeleton = char || loading || error ? null : <Skeleton />;
+  const errorMessage = error ? <ErrorMessage /> : null;
+  const spinner = loading ? <Spinner /> : null;
+  const content = !(loading || error || !char) ? <View char={char} /> : null;
 
-  onError = () => {
-    this.setState({
-      loading: false,
-      error: true,
-    });
-  };
-
-  render() {
-    const { char, loading, error } = this.state;
-
-    const skeleton = char || loading || error ? null : <Skeleton />;
-    const errorMessage = error ? <ErrorMessage /> : null;
-    const spinner = loading ? <Spinner /> : null;
-    const content = !(loading || error || !char) ? <View char={char} /> : null;
-
-    return (
-      <div className="char__info">
-        {skeleton}
-        {errorMessage}
-        {spinner}
-        {content}
-      </div>
-    );
-  }
-}
+  return (
+    <div className="char__info">
+      {skeleton}
+      {errorMessage}
+      {spinner}
+      {content}
+    </div>
+  );
+};
 
 const View = ({ char }) => {
   const { name, description, thumbnail, homepage, wiki, comics } = char;
@@ -113,9 +80,13 @@ const View = ({ char }) => {
         {comics.map((item, i) => {
           // eslint-disable-next-line
           if (i > 9) return;
+          const comicId = item.resourceURI.split("/").pop();
+
           return (
             <li key={i} className="char__comics-item">
-              {item.name}
+              <Link to={`/comics/${comicId}`} style={{ width: "100%" }}>
+                {item.name}
+              </Link>
             </li>
           );
         })}
