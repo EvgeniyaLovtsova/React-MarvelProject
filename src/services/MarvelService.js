@@ -8,8 +8,13 @@ const useMarvelService = () => {
   const _baseCharOffset = 210;
   const _baseComicsOffset = 4;
 
-  const getAllCharecters = async (offset = _baseCharOffset) => {
-    const url = `${_apiBase}characters?limit=9&offset=${offset}&${_apiKey}`;
+  const getAllCharecters = async (offset = _baseCharOffset, name = "") => {
+    let url = `${_apiBase}characters?`;
+    if (name.length > 0) {
+      url = url + `name=${name}&${_apiKey}`;
+    } else {
+      url = url + `limit=9&offset=${offset}&${_apiKey}`;
+    }
     const res = await request(url);
     return res.data.results.map(_transformCharecter);
   };
@@ -55,9 +60,9 @@ const useMarvelService = () => {
         ? `${comics.prices[0].price}$`
         : "not available",
       url: comics.urls[0].url,
-      description:
-        comics.textObjects[0]?.text ? comics.textObjects[0].text :
-        "There is no description for this character",
+      description: comics.textObjects[0]?.text
+        ? comics.textObjects[0].text
+        : "There is no description for this character",
       language: comics.textObjects[0]?.language || "en-us",
       pageCount: comics.pageCount
         ? `${comics.pageCount} pages`
