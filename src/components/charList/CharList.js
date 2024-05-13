@@ -1,11 +1,26 @@
 import "./charList.scss";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { CSSTransition, TransitionGroup } from "react-transition-group";
 import PropTypes from "prop-types";
 import Spinner from "../spinner/Spinner";
 import ErrorMessage from "../errorMessage/ErrorMessage";
 import CharInfo from "../charInfo/CharInfo";
 import useMarvelService from "../../services/MarvelService";
+
+const setContent = (process, Component, newItemLoading) => {
+  switch (process) {
+    case "waiting":
+      return <Spinner />;
+    case "loading":
+      return newItemLoading ? <Component /> : <Spinner />;
+    case "confirmed":
+      return <Component />;
+    case "error":
+      return <ErrorMessage />;
+    default:
+      throw new Error("Unexpecting process state");
+  }
+};
 
 const CharList = (props) => {
   const [newItemLoading, setNewItemLoading] = useState(false);
@@ -14,7 +29,7 @@ const CharList = (props) => {
   const [charEnded, setCharEnded] = useState(false);
   const itemRefs = useRef([]);
 
-  const { loading, error, getAllCharecters } = useMarvelService();
+  const { getAllCharecters, process, setProcess } = useMarvelService();
 
   useEffect(() => {
     onRequest(offset, true);
@@ -23,10 +38,12 @@ const CharList = (props) => {
 
   const onRequest = (offset, initial) => {
     initial ? setNewItemLoading(false) : setNewItemLoading(true);
-    getAllCharecters(offset).then(onListLoaded);
+    getAllCharecters(offset)
+      .then(onListLoaded)
+      .then(() => setProcess("confirmed"));
   };
 
-  const onListLoaded = (newCharacters) => {
+  const onListLoaded = async (newCharacters) => {
     let ended = false;
     if (newCharacters.length < 9) {
       ended = true;
@@ -38,14 +55,11 @@ const CharList = (props) => {
   };
 
   const focusOnItem = (id) => {
-
-    // itemRefs.current.forEach((item) => {
-
-    //   console.log('item = ', item);
-    //   item.classList.remove("char__item_selected")
-    // }
-    // );
+    itemRefs.current.forEach((item) =>
+      item.classList.remove("char__item_selected")
+    );
     itemRefs.current[id].classList.add("char__item_selected");
+    itemRefs.current[id].focus();
   };
 
   const renderCharList = (arr) => {
@@ -92,16 +106,18 @@ const CharList = (props) => {
     );
   };
 
-  const items = renderCharList(characters);
-
-  const errorMessage = error ? <ErrorMessage /> : null;
-  const spinner = loading && !newItemLoading ? <Spinner /> : null;
+  const elements = useMemo(() => {
+    return setContent(
+      process,
+      () => renderCharList(characters),
+      newItemLoading
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [process]);
 
   return (
     <div className="char__list">
-      {spinner}
-      {errorMessage}
-      {items}
+      {elements}
       <button
         className="button button__main button__long"
         disabled={newItemLoading}

@@ -8,16 +8,16 @@ import {
 import * as yup from "yup";
 
 import useMarvelService from "../../services/MarvelService";
-import ErrorMessage from "../errorMessage/ErrorMessage";
+import ErrorMessage from '../errorMessage/ErrorMessage'
 import "./charSearchForm.scss";
 
 const CharSearchForm = () => {
-  const { loading, error, getAllCharecters, clearError } = useMarvelService();
+  const { getAllCharecters, clearError, process, setProcess } = useMarvelService();
   const [responseRender, setResponseRender] = useState(null);
 
   const handleFormSubmit = (name) => {
     clearError();
-    getAllCharecters(null, name).then(onCharLoaded);
+    getAllCharecters(null, name).then(onCharLoaded).then(() => setProcess('confirmed'));
   };
 
   const onCharLoaded = (char) => {
@@ -28,7 +28,7 @@ const CharSearchForm = () => {
     setResponseRender(() => searchServerResponse(message, characterId));
   };
 
-  const errorMessage = error ? (
+  const errorMessage = process === 'error' ? (
     <div className="error">
       <ErrorMessage />
     </div>
@@ -59,7 +59,7 @@ const CharSearchForm = () => {
           <button
             className="button button__main"
             type="submit"
-            disabled={loading}
+            disabled={process === 'loading'}
           >
             <div className="inner">Find</div>
           </button>

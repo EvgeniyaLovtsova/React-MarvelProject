@@ -5,23 +5,50 @@ import ErrorMessage from "../errorMessage/ErrorMessage";
 import Spinner from "../spinner/Spinner";
 import { Link } from "react-router-dom";
 
+const setContent = (process, Component, newItemLoading) => {
+  switch (process) {
+    case "waiting":
+      return <Spinner />;
+    case "loading":
+      return newItemLoading ? <Component /> : <Spinner />;
+    case "confirmed":
+      return <Component />;
+    case "error":
+      return <ErrorMessage />;
+    default:
+      throw new Error("Unexpecting process state");
+  }
+};
+
 const ComicsList = (props) => {
-  const { loading, error, getAllComics } = useMarvelService();
-  const [comics, setComics] = useState([]);
-  const [offset, setOffset] = useState(4);
+  const [comicsList, setComicsList] = useState([]);
+  const [newItemLoading, setnewItemLoading] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [comicsEnded, setComicsEnded] = useState(false);
+
+  const { getAllComics, process, setProcess } = useMarvelService();
 
   useEffect(() => {
-    onRequest();
+    onRequest(offset, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onRequest = () => {
-    getAllComics(offset).then(onListLoaded);
+  const onRequest = (offset, initial) => {
+    initial ? setnewItemLoading(false) : setnewItemLoading(true);
+    getAllComics(offset)
+      .then(onComicsListLoaded)
+      .then(() => setProcess("confirmed"));
   };
 
-  const onListLoaded = (loadedComics) => {
-    setComics((comics) => [...comics, ...loadedComics]);
-    setOffset((offset) => offset + 8);
+  const onComicsListLoaded = (newComicsList) => {
+    let ended = false;
+    if (newComicsList.length < 8) {
+      ended = true;
+    }
+    setComicsList([...comicsList, ...newComicsList]);
+    setnewItemLoading(false);
+    setOffset(offset + 8);
+    setComicsEnded(ended);
   };
 
   const renderComics = (arr) => {
@@ -49,16 +76,12 @@ const ComicsList = (props) => {
     return <ul className="comics__grid">{comicsList}</ul>;
   };
 
-  const comicsList = !(loading && error) ? renderComics(comics) : null;
-  const errorMessage = error ? <ErrorMessage /> : null;
-  const spinner = loading ? <Spinner /> : null;
-
   return (
     <div className="comics__list">
-      {spinner}
-      {errorMessage}
-      {comicsList}
+      {setContent(process, () => renderComics(comicsList), newItemLoading)}
       <button
+        disabled={newItemLoading}
+        style={{ display: comicsEnded ? "none" : "block" }}
         className="button button__main button__long"
         onClick={() => onRequest()}
       >
